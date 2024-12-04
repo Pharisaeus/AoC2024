@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
+use std::slice::Iter;
 
 struct Board {
     cells: HashMap<(i64, i64), char>,
@@ -28,22 +29,22 @@ impl Board {
         }
     }
 
-    fn count_xmas(&self) -> i64 {
+    fn all_positions(&self) -> Vec<(i64, i64)> {
         (0..self.max_x)
-            .map(|x| (0..self.max_y).map(move |y| self.count_xmas_from_pos((x, y))))
+            .map(|x| (0..self.max_y).map(move |y| (x, y)))
             .flatten()
+            .collect()
+    }
+
+    fn count_xmas(&self) -> usize {
+        self.all_positions()
+            .iter()
+            .map(|&pos| self.count_sequences_from(pos))
             .sum()
     }
 
-    fn count_xmas_from_pos(&self, pos: (i64, i64)) -> i64 {
-        self.sequences_from(pos)
-            .iter()
-            .filter(|seq| seq.as_str().eq("MAS"))
-            .count() as i64
-    }
-
-    fn sequences_from(&self, pos: (i64, i64)) -> Vec<String> {
-        let transformations = [
+    fn count_sequences_from(&self, pos: (i64, i64)) -> usize {
+        let steps = [
             Board::up,
             Board::down,
             Board::left,
@@ -54,33 +55,31 @@ impl Board {
             Board::diag_down_left,
         ];
         match self.cells.get(&pos) {
-            Some('X') => transformations
+            Some('X') => steps
                 .map(|f| f(self, pos, 3))
                 .iter()
-                .filter(|o| o.is_some())
-                .map(|o| o.clone().unwrap())
-                .collect_vec(),
-            _ => vec![],
+                .filter(|o| o.as_deref().eq(&Some("MAS")))
+                .count(),
+            _ => 0,
         }
     }
 
-    fn count_mas(&self) -> i64 {
-        (0..self.max_x)
-            .map(|x| (0..self.max_y).map(move |y| self.is_mas_at_position((x, y))))
-            .flatten()
-            .filter(|&x| x)
-            .count() as i64
+    fn count_mas(&self) -> usize {
+        self.all_positions()
+            .iter()
+            .filter(|&&pos| self.is_mas_at_position(pos))
+            .count()
     }
 
     fn is_mas_at_position(&self, pos: (i64, i64)) -> bool {
         match self.cells.get(&pos) {
             Some('A') => {
-                let ul = self.diag_up_left(pos,1);
-                let dr = self.diag_down_right(pos,1);
+                let ul = self.diag_up_left(pos, 1);
+                let dr = self.diag_down_right(pos, 1);
                 match (ul.as_deref(), dr.as_deref()) {
                     (Some("M"), Some("S")) | (Some("S"), Some("M")) => {
-                        let dl = self.diag_down_left(pos,1);
-                        let ur = self.diag_up_right(pos,1);
+                        let dl = self.diag_down_left(pos, 1);
+                        let ur = self.diag_up_right(pos, 1);
                         match (dl.as_deref(), ur.as_deref()) {
                             (Some("M"), Some("S")) | (Some("S"), Some("M")) => true,
                             _ => false,
@@ -140,10 +139,10 @@ impl Board {
         }
     }
 }
-fn part2(board: &Board) -> i64 {
+fn part2(board: &Board) -> usize {
     board.count_mas()
 }
-fn part1(board: &Board) -> i64 {
+fn part1(board: &Board) -> usize {
     board.count_xmas()
 }
 
