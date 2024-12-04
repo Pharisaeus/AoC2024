@@ -1,18 +1,13 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
-use std::slice::Iter;
 
 struct Board {
-    cells: HashMap<(i64, i64), char>,
-    max_x: i64,
-    max_y: i64,
+    cells: HashMap<(i64, i64), char>
 }
 
 impl Board {
     fn new(content: &str) -> Board {
-        let max_x = content.len() as i64;
-        let max_y = content.lines().count() as i64;
         Board {
             cells: content
                 .lines()
@@ -23,22 +18,12 @@ impl Board {
                         .map(move |(col_index, c)| ((row_index as i64, col_index as i64), c))
                 })
                 .flatten()
-                .collect(),
-            max_x,
-            max_y,
+                .collect()
         }
     }
 
-    fn all_positions(&self) -> Vec<(i64, i64)> {
-        (0..self.max_x)
-            .map(|x| (0..self.max_y).map(move |y| (x, y)))
-            .flatten()
-            .collect()
-    }
-
     fn count_xmas(&self) -> usize {
-        self.all_positions()
-            .iter()
+        self.cells.keys()
             .map(|&pos| self.count_sequences_from(pos))
             .sum()
     }
@@ -65,8 +50,7 @@ impl Board {
     }
 
     fn count_mas(&self) -> usize {
-        self.all_positions()
-            .iter()
+        self.cells.keys()
             .filter(|&&pos| self.is_mas_at_position(pos))
             .count()
     }
