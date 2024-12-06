@@ -113,7 +113,7 @@ impl Board {
         !self.cells.contains_key(&pos)
     }
     fn propagate_guard(&self) -> WalkResult {
-        let mut visited_states:HashSet<State> = HashSet::new();
+        let mut visited_states: HashSet<State> = HashSet::new();
         let mut current_cell = self.start;
         let mut current_direction = Direction::Up;
         loop {
@@ -174,14 +174,6 @@ fn part1(board: &Board) -> usize {
 pub(crate) fn solve() {
     let content = fs::read_to_string("6.txt").unwrap();
     let board = Board::new(&content);
-
-    use std::time::Instant;
-    let now = Instant::now();
-    {
-        println!("{}", part1(&board));
-        println!("{}", part2(&board));
-    }
-
-    let elapsed = now.elapsed();
-    println!("Elapsed: {:.2?}", elapsed);
+    println!("{}", part1(&board));
+    println!("{}", part2(&board));
 }
