@@ -65,7 +65,13 @@ enum WalkState {
 
 struct WalkResult {
     state: WalkState,
-    visited_cells: HashSet<(i32, i32)>,
+    visited_states: HashSet<State>,
+}
+
+impl WalkResult {
+    fn visited_cells(&self) -> HashSet<(i32, i32)> {
+        self.visited_states.iter().map(|state| state.pos).collect()
+    }
 }
 struct Board {
     start: (i32, i32),
@@ -107,7 +113,7 @@ impl Board {
         !self.cells.contains_key(&pos)
     }
     fn propagate_guard(&self) -> WalkResult {
-        let mut visited_states = HashSet::new();
+        let mut visited_states:HashSet<State> = HashSet::new();
         let mut current_cell = self.start;
         let mut current_direction = Direction::Up;
         loop {
@@ -115,10 +121,10 @@ impl Board {
                 pos: current_cell,
                 direction: current_direction.clone(),
             };
-            if visited_states.iter().contains(&current_state) {
+            if visited_states.contains(&current_state) {
                 return WalkResult {
                     state: WalkState::Looped,
-                    visited_cells: visited_states.iter().map(|x| x.pos).collect(),
+                    visited_states,
                 };
             }
             visited_states.insert(current_state);
@@ -126,7 +132,7 @@ impl Board {
             if self.is_oob(next_cell) {
                 return WalkResult {
                     state: WalkState::OutOfBounds,
-                    visited_cells: visited_states.iter().map(|x| x.pos).collect(),
+                    visited_states,
                 };
             } else if self.is_legal(next_cell) {
                 current_cell = next_cell
@@ -142,7 +148,7 @@ fn part2(board: &Board) -> usize {
     let mut looped = 0;
     let mut base_board: HashMap<(i32, i32), CellType> =
         board.cells.iter().map(|(&pos, &c)| (pos, c)).collect();
-    let mut cells_to_test = result.visited_cells;
+    let mut cells_to_test = result.visited_cells();
     cells_to_test.remove(&board.start);
     for route_cell in cells_to_test {
         base_board.insert(route_cell, CellType::Obstacle);
@@ -162,7 +168,7 @@ fn part2(board: &Board) -> usize {
 
 fn part1(board: &Board) -> usize {
     let result = board.propagate_guard();
-    result.visited_cells.len()
+    result.visited_cells().len()
 }
 
 pub(crate) fn solve() {
