@@ -30,7 +30,7 @@ impl OrderingRules {
     fn new(content: &str) -> Self {
         let rules_segment = content
             .split("\n\n")
-            .find_or_first(|x| true)
+            .find_or_first(|_x| true)
             .unwrap();
         Self {
             rules: rules_segment
@@ -93,7 +93,7 @@ impl Updates {
         let updates_segment = content
             .split("\n\n")
             .skip(1)
-            .find_or_first(|x| true)
+            .find_or_first(|_x| true)
             .unwrap();
         Self {
             updates: updates_segment

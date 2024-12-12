@@ -96,8 +96,8 @@ impl Board {
             .collect();
         let start = cells
             .iter()
-            .find_or_first(|&((x, y), c)| c.eq(&CellType::Start))
-            .map(|(&(x, y), c)| (x, y))
+            .find_or_first(|&(_pos, c)| c.eq(&CellType::Start))
+            .map(|(&(x, y), _c)| (x, y))
             .unwrap();
         Self { start, cells }
     }

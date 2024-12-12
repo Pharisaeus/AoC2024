@@ -66,7 +66,7 @@ impl TopoMap {
     fn trailheads(&self) -> Vec<(i32, i32)> {
         self.cells
             .iter()
-            .filter(|(pos, &height)| height == 0)
+            .filter(|(_pos, &height)| height == 0)
             .map(|(pos, _)| *pos)
             .collect()
     }

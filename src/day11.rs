@@ -1,6 +1,5 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::hash::Hash;
 
 struct Stones {
     stones: VecDeque<u128>,
