@@ -30,7 +30,7 @@ impl Board {
                 if !antennas.contains_key(c) {
                     antennas.insert(*c, Vec::new());
                 }
-                let mut v = antennas.get_mut(c).unwrap();
+                let v = antennas.get_mut(c).unwrap();
                 v.push(*pos);
             }
         }
