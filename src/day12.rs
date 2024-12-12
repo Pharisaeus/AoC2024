@@ -2,6 +2,7 @@ use crate::day12::EdgeDirection::{Horizontal, Vertical};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
+use std::hash::Hash;
 
 struct Board {
     cells: HashMap<(i64, i64), char>,
@@ -27,45 +28,26 @@ impl Board {
         let mut regions = Vec::new();
         for pos in self.cells.keys() {
             if !visited.contains(pos) {
-                let region = self.bfs(pos);
-                visited.extend(region.points.iter().map(|p| (p.x, p.y)));
+                let point = Point { x: pos.0, y: pos.1 };
+                let label = self.cells[pos];
+                let points = bfs(&point, |p| self.neighbours(p));
+                visited.extend(points.iter().map(|p| (p.x, p.y)));
+                let region = Region { label, points };
                 regions.push(region);
             }
         }
         regions
     }
 
-    fn bfs(&self, pos: &(i64, i64)) -> Region {
-        let label = self.cells[pos];
-        let mut points = vec![];
-        let mut visited = HashSet::new();
-        let mut to_check = VecDeque::new();
-        to_check.push_back(*pos);
-        while !to_check.is_empty() {
-            let current = to_check.pop_front().unwrap();
-            if !visited.contains(&current) {
-                visited.insert(current);
-                points.push(Point {
-                    x: current.0,
-                    y: current.1,
-                });
-                for neighbour in self.neighbours(&current) {
-                    to_check.push_back(neighbour);
-                }
-            }
-        }
-        Region { label, points }
-    }
-
-    fn neighbours(&self, point: &(i64, i64)) -> Vec<(i64, i64)> {
-        let label = self.cells.get(point).unwrap();
-        let x = point.0;
-        let y = point.1;
+    fn neighbours(&self, point: &Point) -> Vec<Point> {
+        let x = point.x;
+        let y = point.y;
+        let label = self.cells[&(x, y)];
         vec![(x, y + 1), (x, y - 1), (x + 1, y), (x - 1, y)]
             .iter()
             .filter(|pos| self.cells.contains_key(pos))
-            .filter(|pos| self.cells.get(pos).unwrap() == label)
-            .map(|x| *x)
+            .filter(|pos| self.cells[pos] == label)
+            .map(|p| Point { x: p.0, y: p.1 })
             .collect()
     }
 }
@@ -143,7 +125,7 @@ impl Edge {
 }
 
 impl Point {
-    fn edges(&self) -> Vec<Edge> {
+    fn surround_edges(&self) -> Vec<Edge> {
         [
             EdgeLocation::Left,
             EdgeLocation::Right,
@@ -170,7 +152,7 @@ impl Region {
         let single_edges: HashSet<(Point, Point)> = self
             .points
             .iter()
-            .map(|point| point.edges())
+            .map(|point| point.surround_edges())
             .flatten()
             .map(|edge| (edge.first, edge.second))
             .counts()
@@ -180,7 +162,7 @@ impl Region {
             .collect();
         self.points
             .iter()
-            .map(|point| point.edges())
+            .map(|point| point.surround_edges())
             .flatten()
             .filter(|e| single_edges.contains(&(e.first, e.second)))
             .collect()
@@ -198,7 +180,9 @@ impl Region {
             let edge_direction = e.direction();
             for p in [e.first, e.second] {
                 if !visited_points.contains(&(p, edge_direction)) {
-                    let side = self.expand_side(&edge_direction, &p, &e.location, &edges);
+                    let side = bfs(&p, |p| {
+                        self.neighbours(p, &edge_direction, &e.location, &edges)
+                    });
                     sides += 1;
                     for side_point in side {
                         visited_points.insert((side_point, edge_direction));
@@ -209,45 +193,35 @@ impl Region {
         sides
     }
 
-    fn expand_side(
+    fn neighbours(
         &self,
+        current: &Point,
         edge_direction: &EdgeDirection,
-        start: &Point,
         edge_location: &EdgeLocation,
-        perimiter_edges: &HashSet<Edge>,
+        perimeter_edges: &HashSet<Edge>,
     ) -> Vec<Point> {
-        let mut to_check = VecDeque::new();
-        to_check.push_back(*start);
         let deltas = edge_direction.deltas();
-        let mut visited = HashSet::new();
-        let mut side_points = vec![];
-        while !to_check.is_empty() {
-            let current = to_check.pop_front().unwrap();
-            if !visited.contains(&current) {
-                visited.insert(current);
-                side_points.push(current);
-                for (dx, dy) in deltas.iter() {
-                    let neighbour = Point {
-                        x: current.x + dx,
-                        y: current.y + dy,
-                    };
-                    let e1 = Edge {
-                        first: current,
-                        second: neighbour,
-                        location: *edge_location,
-                    };
-                    let e2 = Edge {
-                        first: neighbour,
-                        second: current,
-                        location: *edge_location,
-                    };
-                    if perimiter_edges.contains(&e1) || perimiter_edges.contains(&e2) {
-                        to_check.push_back(neighbour);
-                    }
-                }
+        let mut neighbours = vec![];
+        for (dx, dy) in deltas.iter() {
+            let neighbour = Point {
+                x: current.x + dx,
+                y: current.y + dy,
+            };
+            let e1 = Edge {
+                first: *current,
+                second: neighbour,
+                location: *edge_location,
+            };
+            let e2 = Edge {
+                first: neighbour,
+                second: *current,
+                location: *edge_location,
+            };
+            if perimeter_edges.contains(&e1) || perimeter_edges.contains(&e2) {
+                neighbours.push(neighbour);
             }
         }
-        side_points
+        neighbours
     }
 
     fn fence_price(&self) -> i64 {
@@ -266,6 +240,25 @@ fn part2(regions: &Vec<Region>) -> i64 {
 fn part1(regions: &Vec<Region>) -> i64 {
     regions.iter().map(|region| region.fence_price()).sum()
 }
+
+fn bfs<T: Clone + Copy + Hash + Eq>(start: &T, neighbours: impl Fn(&T) -> Vec<T>) -> Vec<T> {
+    let mut result = vec![];
+    let mut visited = HashSet::new();
+    let mut to_check = VecDeque::new();
+    to_check.push_back(*start);
+    while !to_check.is_empty() {
+        let current = to_check.pop_front().unwrap();
+        if !visited.contains(&current) {
+            visited.insert(current);
+            result.push(current);
+            for neighbour in neighbours(&current) {
+                to_check.push_back(neighbour);
+            }
+        }
+    }
+    result
+}
+
 pub(crate) fn solve() {
     let content = fs::read_to_string("12.txt").unwrap();
     let board = Board::new(&content);
