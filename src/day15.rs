@@ -44,102 +44,109 @@ impl Board {
         Board { cells, robot }
     }
 
-    fn step_big(&mut self, direction: &Direction) {
+    fn step(&mut self, direction: &Direction) {
         match direction {
-            Direction::Left => self.step_simple(direction),
-            Direction::Right => self.step_simple(direction),
-            Direction::Up => self.big_step(direction),
-            Direction::Down => self.big_step(direction),
+            Direction::Left => self.horizontal_step(direction),
+            Direction::Right => self.horizontal_step(direction),
+            Direction::Up => self.vertical_step(direction),
+            Direction::Down => self.vertical_step(direction),
         }
     }
 
-    fn step_simple(&mut self, direction: &Direction) {
-        if self.simple_check_step(direction) {
-            let (dx, dy) = direction.delta();
-            let mut current = self.robot;
-            let mut previous = self.cells.get(&current).unwrap().clone();
-            self.robot = (self.robot.0 + dx, self.robot.1 + dy);
-            loop {
-                current.0 += dx;
-                current.1 += dy;
-                let tmp = self.cells.get(&current).unwrap().clone();
-                self.cells.insert(current, previous.clone());
-                previous = tmp;
-                if previous.eq(&CellType::Empty) {
-                    break;
-                }
-            }
-        }
-    }
-
-    fn simple_check_step(&self, direction: &Direction) -> bool {
-        let (dx, dy) = direction.delta();
-        let mut current = self.robot;
-        current.0 += dx;
-        current.1 += dy;
-        loop {
-            if self.is_cell(&current, &CellType::Empty) {
-                return true;
-            } else if self.is_cell(&current, &CellType::Wall) {
-                return false;
-            } else {
-                current.0 += dx;
-                current.1 += dy;
-            }
-        }
-    }
-
-    fn big_step(&mut self, direction: &Direction) {
-        if self.big_step_check(self.robot, direction) {
+    fn horizontal_step(&mut self, direction: &Direction) {
+        if self.horizontal_step_check(self.robot, direction) {
             let (x, y) = self.robot;
-            let (_, dy) = direction.delta();
-            self.make_big_step((x, y + dy), direction, &CellType::Empty);
-            self.robot = (self.robot.0, self.robot.1 + dy);
+            let (dx, _) = direction.delta();
+            self.make_horizontal_step((x + dx, y), direction, &CellType::Empty);
+            self.robot = (self.robot.0 + dx, self.robot.1);
         }
     }
 
-    fn make_big_step(&mut self, (x, y): (i64, i64), direction: &Direction, previous: &CellType) {
-        let (_, dy) = direction.delta();
-        let next_cell = self.cells.get(&(x, y)).unwrap();
+    fn horizontal_step_check(&self, (x, y): (i64, i64), direction: &Direction) -> bool {
+        let (dx, _) = direction.delta();
+        let next_cell = self.cells.get(&(x + dx, y)).unwrap();
         match next_cell {
-            CellType::Box => {
-                panic!()
-            }
+            CellType::Wall => false,
+            CellType::Empty => true,
+            _ => self.horizontal_step_check((x + dx, y), direction),
+        }
+    }
+
+    fn make_horizontal_step(
+        &mut self,
+        (x, y): (i64, i64),
+        direction: &Direction,
+        previous: &CellType,
+    ) {
+        let (dx, _) = direction.delta();
+        let next_cell = *self.cells.get(&(x, y)).unwrap();
+        match next_cell {
             CellType::Wall => return,
             CellType::Empty => {
                 self.cells.insert((x, y), *previous);
             }
-            CellType::BoxL => {
+            next_type => {
                 self.cells.insert((x, y), *previous);
-                self.cells.insert((x + 1, y), CellType::Empty);
-                self.make_big_step((x, y + dy), direction, &CellType::BoxL);
-                self.make_big_step((x + 1, y + dy), direction, &CellType::BoxR);
-            }
-            CellType::BoxR => {
-                self.cells.insert((x, y), *previous);
-                self.cells.insert((x - 1, y), CellType::Empty);
-                self.make_big_step((x, y + dy), direction, &CellType::BoxR);
-                self.make_big_step((x - 1, y + dy), direction, &CellType::BoxL);
+                self.make_horizontal_step((x + dx, y), direction, &next_type);
             }
         }
     }
 
-    fn big_step_check(&self, (x, y): (i64, i64), direction: &Direction) -> bool {
+    fn vertical_step(&mut self, direction: &Direction) {
+        if self.vertical_step_check(self.robot, direction) {
+            let (x, y) = self.robot;
+            let (_, dy) = direction.delta();
+            self.make_vertical_step((x, y + dy), direction, &CellType::Empty);
+            self.robot = (self.robot.0, self.robot.1 + dy);
+        }
+    }
+
+    fn vertical_step_check(&self, (x, y): (i64, i64), direction: &Direction) -> bool {
         let (_, dy) = direction.delta();
         let next_cell = self.cells.get(&(x, y + dy)).unwrap();
         match next_cell {
-            CellType::Box => {
-                panic!()
-            }
             CellType::Wall => false,
             CellType::Empty => true,
+            CellType::Box => self.vertical_step_check((x, y + dy), direction),
             CellType::BoxL => {
-                self.big_step_check((x, y + dy), direction)
-                    && return self.big_step_check((x + 1, y + dy), direction)
+                self.vertical_step_check((x, y + dy), direction)
+                    && return self.vertical_step_check((x + 1, y + dy), direction)
             }
             CellType::BoxR => {
-                self.big_step_check((x, y + dy), direction)
-                    && return self.big_step_check((x - 1, y + dy), direction)
+                self.vertical_step_check((x, y + dy), direction)
+                    && return self.vertical_step_check((x - 1, y + dy), direction)
+            }
+        }
+    }
+
+    fn make_vertical_step(
+        &mut self,
+        (x, y): (i64, i64),
+        direction: &Direction,
+        previous: &CellType,
+    ) {
+        let (_, dy) = direction.delta();
+        let next_cell = self.cells.get(&(x, y)).unwrap();
+        match next_cell {
+            CellType::Wall => return,
+            CellType::Empty => {
+                self.cells.insert((x, y), *previous);
+            }
+            CellType::Box => {
+                self.cells.insert((x, y), *previous);
+                self.make_vertical_step((x, y + dy), direction, &CellType::Box);
+            }
+            CellType::BoxL => {
+                self.cells.insert((x, y), *previous);
+                self.cells.insert((x + 1, y), CellType::Empty);
+                self.make_vertical_step((x, y + dy), direction, &CellType::BoxL);
+                self.make_vertical_step((x + 1, y + dy), direction, &CellType::BoxR);
+            }
+            CellType::BoxR => {
+                self.cells.insert((x, y), *previous);
+                self.cells.insert((x - 1, y), CellType::Empty);
+                self.make_vertical_step((x, y + dy), direction, &CellType::BoxR);
+                self.make_vertical_step((x - 1, y + dy), direction, &CellType::BoxL);
             }
         }
     }
@@ -219,32 +226,14 @@ impl Direction {
         }
     }
 }
-
-fn part2(mut board: Board, directions: &Vec<Direction>) -> i64 {
+fn solve_board(mut board: Board, directions: &Vec<Direction>) -> i64 {
     for d in directions {
-        board.step_big(d);
+        board.step(d);
     }
     println!("{}", board);
     board.score()
 }
-
-fn part1(mut board: Board, directions: &Vec<Direction>) -> i64 {
-    for d in directions {
-        board.step_simple(d);
-    }
-    println!("{}", board);
-    board.score()
-}
-pub(crate) fn solve() {
-    let content = fs::read_to_string("15.txt").unwrap();
-    let (b, m) = content.split("\n\n").collect_tuple().unwrap();
-    let board = Board::new(b);
-    let directions = m
-        .chars()
-        .filter(|c| !c.eq(&'\n'))
-        .map(Direction::new)
-        .collect();
-    println!("{}", part1(board, &directions));
+fn part2(b: &str, directions: &Vec<Direction>) -> i64 {
     let board_big = Board::new(
         b.replace('#', "##")
             .replace('O', "[]")
@@ -252,5 +241,21 @@ pub(crate) fn solve() {
             .replace('@', "@.")
             .as_str(),
     );
-    println!("{}", part2(board_big, &directions));
+    solve_board(board_big, directions)
+}
+
+fn part1(b: &str, directions: &Vec<Direction>) -> i64 {
+    let board = Board::new(b);
+    solve_board(board, directions)
+}
+pub(crate) fn solve() {
+    let content = fs::read_to_string("15.txt").unwrap();
+    let (b, m) = content.split("\n\n").collect_tuple().unwrap();
+    let directions = m
+        .chars()
+        .filter(|c| !c.eq(&'\n'))
+        .map(Direction::new)
+        .collect();
+    println!("{}", part1(b, &directions));
+    println!("{}", part2(b, &directions));
 }

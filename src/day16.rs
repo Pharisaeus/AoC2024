@@ -101,7 +101,6 @@ impl Maze {
         let (cost, last_direction) = [Direction::N, Direction::S, Direction::E, Direction::W]
             .map(|d| Vertex { pos: self.end, d })
             .iter()
-            .filter(|k| pred.contains_key(k))
             .map(|k| (*costs.get(k).unwrap(), k.d))
             .min_by(|x, y| x.0.cmp(&y.0))
             .unwrap();
