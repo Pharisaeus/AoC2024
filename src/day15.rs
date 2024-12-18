@@ -167,7 +167,7 @@ impl Board {
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut res = String::new();
-        let dim = *self.cells.keys().map(|(x, y)| y).max().unwrap();
+        let dim = *self.cells.keys().map(|(_, y)| y).max().unwrap();
         for y in 0..dim + 1 {
             for x in 0..(dim + 1) * 2 {
                 if self.robot.eq(&(x, y)) {
@@ -214,15 +214,6 @@ impl Direction {
             Direction::Right => (1, 0),
             Direction::Up => (0, -1),
             Direction::Down => (0, 1),
-        }
-    }
-
-    fn label(&self) -> char {
-        match self {
-            Direction::Left => '<',
-            Direction::Right => '>',
-            Direction::Up => '^',
-            Direction::Down => 'v',
         }
     }
 }

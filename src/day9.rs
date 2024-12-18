@@ -60,13 +60,6 @@ impl Disk {
         Self { blocks, file_meta }
     }
 
-    fn print(&self) {
-        for block in &self.blocks {
-            print!("{block}");
-        }
-        println!()
-    }
-
     fn defrag_blocks(&mut self) {
         let mut empty_indices = VecDeque::new();
         let mut taken_indices = VecDeque::new();
