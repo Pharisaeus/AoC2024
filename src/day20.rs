@@ -112,28 +112,26 @@ impl Board {
         let distances_start = self.distances(self.start);
         let distances_end = self.distances(self.end);
         let regular = distances_start.get(&(self.end)).unwrap();
-        let dim = self.dim();
         let mut cheats = HashSet::new();
-        for cheat_x in 0..dim {
-            for cheat_y in 0..dim {
-                let cheat_start = (cheat_x, cheat_y);
-                if self.cells.get(&cheat_start).unwrap() == &CellType::Wall {
-                    continue;
-                }
-                for cheat_end in self.far_neighbours(cheat_start, duration) {
-                    let distance_to_start = distances_start.get(&(cheat_start));
-                    let distance_to_end = distances_end.get(&(cheat_end));
-                    let manhattan = self.manhattan(&cheat_start, &cheat_end);
-                    match (distance_to_start, distance_to_end) {
-                        (Some(ds), Some(de)) => {
-                            let total = ds + de + manhattan;
-                            let saved = regular - total;
-                            if saved >= cutoff {
-                                cheats.insert((cheat_start, cheat_end));
-                            }
+        for &cheat_start in self
+            .cells
+            .iter()
+            .filter(|(pos, t)| t == &&CellType::Empty)
+            .map(|(pos, _)| pos)
+        {
+            for cheat_end in self.far_neighbours(cheat_start, duration) {
+                let distance_to_start = distances_start.get(&(cheat_start));
+                let distance_to_end = distances_end.get(&(cheat_end));
+                let manhattan = self.manhattan(&cheat_start, &cheat_end);
+                match (distance_to_start, distance_to_end) {
+                    (Some(ds), Some(de)) => {
+                        let total = ds + de + manhattan;
+                        let saved = regular - total;
+                        if saved >= cutoff {
+                            cheats.insert((cheat_start, cheat_end));
                         }
-                        _ => {}
                     }
+                    _ => {}
                 }
             }
         }
