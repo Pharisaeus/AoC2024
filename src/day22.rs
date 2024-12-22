@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::fs;
 
 fn next_number(secret: i64) -> i64 {
-    // & 2^24-1
     let mut result = (secret ^ (secret << 6)) % 16777216;
     result = (result ^ (result >> 5)) % 16777216;
     result = (result ^ (result << 11)) % 16777216;
